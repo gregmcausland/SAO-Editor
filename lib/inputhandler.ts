@@ -28,6 +28,8 @@ class InputHandler {
 
 	updatePosition( e )
 	{
+		e.preventDefault();
+
 		this.mouse.x = e.pageX;
 		this.mouse.y = e.pageY;
 
@@ -41,30 +43,47 @@ class InputHandler {
 
 			if ( this.drag )
 			{
-				if ( this.target ) this.target.fireEvent({ type: 'drag', from: this.origin, to: this.mouse });
-				console.log('dragging');
+				if ( this.target ) 
+				{
+					this.target.dispatchEvent({ type: 'drag', from: this.origin, to: this.mouse, eventTarget: this.target });
+					this.element.style.cursor = 'all-scroll';
+				}
 			}
 		}
 	};
 
 	handleMousedown( e )
 	{
+		e.preventDefault();
+
 		this.updatePosition( e );
 		this.origin.x 	= this.mouse.x;
 		this.origin.y 	= this.mouse.y;
 		this.mousedown 	= true;
+
+		for ( var i=0, len=this.hotspots.length; i<len; i++ )
+		{
+			if ( this.hotspots[i].collide( this.mouse ) )
+			{
+				this.target = this.hotspots[i];
+				break;
+			}
+		}
 	};
 
-	handleMouseup()
+	handleMouseup( e )
 	{
+		e.preventDefault();
+
 		if ( this.click ) {
-			if ( this.target ) this.target.fireEvent({ type: 'click' });
-			console.log('clicked ' + this.mouse.x + ' ' + this.mouse.y);
+			if ( this.target ) this.target.dispatchEvent({ type: 'click' });
 		}
 		this.target 	= null;
 		this.click 		= true;
 		this.drag 		= false;
 		this.mousedown	= false;
+
+		this.element.style.cursor = 'auto';
 	};
 
 	addHotSpot( hotspot )
