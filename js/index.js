@@ -1,7 +1,3 @@
-var Vector2d = (function () {
-    function Vector2d() { }
-    return Vector2d;
-})();
 var View = (function () {
     function View(width, height) {
         if (typeof width === "undefined") { width = 800; }
@@ -36,6 +32,10 @@ var InputHandler = (function () {
     return InputHandler;
 })();
 ;
+var Vector2d = (function () {
+    function Vector2d() { }
+    return Vector2d;
+})();
 var Hotspot = (function () {
     function Hotspot(x, y, w, h, visible) {
         if (typeof visible === "undefined") { visible = true; }
