@@ -39,73 +39,6 @@ var Vector2d = (function () {
     function Vector2d() { }
     return Vector2d;
 })();
-var InputHandler = (function () {
-    function InputHandler(element) {
-        this.mouse = new Vector2d();
-        this.origin = new Vector2d();
-        this.hotspots = [];
-        this.element = element;
-        this.click = true;
-        element.addEventListener('mousedown', this.handleMousedown.bind(this));
-        element.addEventListener('mouseup', this.handleMouseup.bind(this));
-        element.addEventListener('mousemove', this.updatePosition.bind(this));
-    }
-    InputHandler.prototype.updatePosition = function (e) {
-        e.preventDefault();
-        this.mouse.x = e.pageX;
-        this.mouse.y = e.pageY;
-        if(this.mousedown) {
-            if(this.origin.x !== this.mouse.x && this.origin.y !== this.mouse.y) {
-                this.click = false;
-                this.drag = true;
-            }
-            if(this.drag) {
-                if(this.target) {
-                    this.target.dispatchEvent({
-                        type: 'drag',
-                        from: this.origin,
-                        to: this.mouse,
-                        eventTarget: this.target
-                    });
-                    this.element.style.cursor = 'all-scroll';
-                }
-            }
-        }
-    };
-    InputHandler.prototype.handleMousedown = function (e) {
-        e.preventDefault();
-        this.updatePosition(e);
-        this.origin.x = this.mouse.x;
-        this.origin.y = this.mouse.y;
-        this.mousedown = true;
-        for(var i = 0, len = this.hotspots.length; i < len; i++) {
-            if(this.hotspots[i].collide(this.mouse)) {
-                this.target = this.hotspots[i];
-                break;
-            }
-        }
-    };
-    InputHandler.prototype.handleMouseup = function (e) {
-        e.preventDefault();
-        if(this.click) {
-            if(this.target) {
-                this.target.dispatchEvent({
-                    type: 'click'
-                });
-            }
-        }
-        this.target = null;
-        this.click = true;
-        this.drag = false;
-        this.mousedown = false;
-        this.element.style.cursor = 'auto';
-    };
-    InputHandler.prototype.addHotSpot = function (hotspot) {
-        this.hotspots.push(hotspot);
-    };
-    return InputHandler;
-})();
-;
 var EventDispatcher = (function () {
     function EventDispatcher() { }
     EventDispatcher.prototype.addEventListener = function (type, listener) {
@@ -164,8 +97,10 @@ var __extends = this.__extends || function (d, b) {
 };
 var Hotspot = (function (_super) {
     __extends(Hotspot, _super);
-    function Hotspot(x, y, w, h, enabled) {
+    function Hotspot(x, y, w, h, enabled, draggable, resizeable) {
         if (typeof enabled === "undefined") { enabled = true; }
+        if (typeof draggable === "undefined") { draggable = false; }
+        if (typeof resizeable === "undefined") { resizeable = false; }
         _super.call(this);
         this.position = new Vector2d();
         this.size = new Vector2d();
@@ -196,24 +131,92 @@ var Hotspot = (function (_super) {
     };
     return Hotspot;
 })(EventDispatcher);
+var InputHandler = (function (_super) {
+    __extends(InputHandler, _super);
+    function InputHandler(element) {
+        _super.call(this);
+        this.mouse = new Vector2d();
+        this.origin = new Vector2d();
+        this.hotspots = [];
+        this.element = element;
+        this.click = true;
+        element.addEventListener('mousedown', this.handleMousedown.bind(this));
+        element.addEventListener('mouseup', this.handleMouseup.bind(this));
+        element.addEventListener('mousemove', this.updatePosition.bind(this));
+    }
+    InputHandler.prototype.updatePosition = function (e) {
+        e.preventDefault();
+        this.mouse.x = e.pageX;
+        this.mouse.y = e.pageY;
+        if(this.mousedown) {
+            if(this.origin.x !== this.mouse.x && this.origin.y !== this.mouse.y) {
+                this.click = false;
+                this.drag = true;
+            }
+            if(this.drag) {
+                if(this.target && this.target.draggable) {
+                    this.target.dispatchEvent({
+                        type: 'drag',
+                        from: this.origin,
+                        to: this.mouse,
+                        eventTarget: this.target
+                    });
+                    this.element.style.cursor = 'all-scroll';
+                }
+            }
+        }
+    };
+    InputHandler.prototype.handleMousedown = function (e) {
+        e.preventDefault();
+        this.updatePosition(e);
+        this.origin.x = this.mouse.x;
+        this.origin.y = this.mouse.y;
+        this.mousedown = true;
+        for(var i = 0, len = this.hotspots.length; i < len; i++) {
+            if(this.hotspots[i].collide(this.mouse)) {
+                this.target = this.hotspots[i];
+                break;
+            }
+        }
+    };
+    InputHandler.prototype.handleMouseup = function (e) {
+        e.preventDefault();
+        if(this.click) {
+            if(this.target) {
+                this.target.dispatchEvent({
+                    type: 'click'
+                });
+            }
+        }
+        this.target = null;
+        this.click = true;
+        this.drag = false;
+        this.mousedown = false;
+        this.element.style.cursor = 'auto';
+    };
+    InputHandler.prototype.addHotspot = function (hotspot) {
+        this.hotspots.push(hotspot);
+    };
+    return InputHandler;
+})(EventDispatcher);
+;
 var view = new View();
 var inputHandler = new InputHandler(view.canvas);
-var hotspots = [];
+var Test = (function (_super) {
+    __extends(Test, _super);
+    function Test() {
+        _super.apply(this, arguments);
+
+    }
+    Test.prototype.test = function () {
+        alert('hello');
+    };
+    return Test;
+})(Hotspot);
+inputHandler.addHotspot(new Test(100, 100, 50, 50));
 document.body.appendChild(view.canvas);
-hotspots.push(new Hotspot(100, 100, 100, 100));
-inputHandler.addHotSpot(hotspots[0]);
-hotspots[0].addEventListener('click', function () {
-    alert('hello world');
-});
-hotspots[0].addEventListener('drag', function (e) {
-    e.eventTarget.position.x = e.to.x;
-    e.eventTarget.position.y = e.to.y;
-});
 function tick() {
     view.clear();
-    for(var i = 0, len = hotspots.length; i < len; i++) {
-        hotspots[i].render(view.context);
-    }
     requestAnimationFrame(tick);
 }
 tick();

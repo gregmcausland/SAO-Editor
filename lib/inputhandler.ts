@@ -1,10 +1,12 @@
 /// <reference path="vector2d.ts" />
+/// <reference path="hotspot.ts" />
+/// <reference path="eventdispatcher.ts" />
 
-class InputHandler {
+class InputHandler extends EventDispatcher {
 
 	element;
-	hotspots;
 	target;
+	hotspots;
 
 	mouse 			: Vector2d;
 	origin			: Vector2d;
@@ -15,6 +17,8 @@ class InputHandler {
 
 	constructor( element )
 	{
+		super();
+
 		this.mouse 		= new Vector2d;
 		this.origin		= new Vector2d;
 		this.hotspots 	= [];
@@ -43,7 +47,7 @@ class InputHandler {
 
 			if ( this.drag )
 			{
-				if ( this.target ) 
+				if ( this.target  && this.target.draggable ) 
 				{
 					this.target.dispatchEvent({ type: 'drag', from: this.origin, to: this.mouse, eventTarget: this.target });
 					this.element.style.cursor = 'all-scroll';
@@ -86,7 +90,7 @@ class InputHandler {
 		this.element.style.cursor = 'auto';
 	};
 
-	addHotSpot( hotspot )
+	addHotspot( hotspot:Hotspot )
 	{
 		this.hotspots.push( hotspot );
 	};

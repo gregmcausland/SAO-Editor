@@ -8,8 +8,10 @@ class Hotspot extends EventDispatcher {
 	half		: Vector2d;
 
 	enabled		: bool;
+	draggable	: bool;
+	resizeable	: bool;
 
-	constructor( x:number, y:number, w:number, h:number, enabled:bool = true )
+	constructor( x:number, y:number, w:number, h:number, enabled:bool = true, draggable:bool = false, resizeable:bool = false )
 	{
 		super();
 
