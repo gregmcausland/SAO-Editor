@@ -7,11 +7,15 @@ class View {
 	height		: number;
 	resizetimer	: number;
 
-	constructor( width:number = 0, height:number = 0 )
+	background	: String;
+
+	constructor( width:number = 0, height:number = 0, background:String = '#f3f3f3' )
 	{
 		this.canvas = document.createElement('canvas');
 		this.context = this.canvas.getContext('2d');
 		this.resize( width, height );
+
+		this.background = background;
 
 		window.addEventListener( 'resize', function() {
 			this.resizetimer = setTimeout( this.resize.bind(this), 500 );
@@ -39,7 +43,10 @@ class View {
 
 	clear()
 	{
-		this.context.clearRect( 0, 0, this.width, this.height );
+		this.context.save();
+		this.context.fillStyle = this.background;
+		this.context.fillRect( 0, 0, this.width, this.height );
+		this.context.restore();
 	};
 
 };

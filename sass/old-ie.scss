@@ -1,0 +1,10 @@
+
+/* Recompile styles for legacy ie only.
+
+	set $fix-mqs: width; in config
+	fixed breakpoint for 'responsive' ie8 ouput.
+==================================================== */
+
+$old-ie: true;
+@import 'alienation/alienation';
+@import 'layout';

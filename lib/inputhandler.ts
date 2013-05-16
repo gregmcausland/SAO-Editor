@@ -74,6 +74,7 @@ class InputHandler extends EventDispatcher {
 			if ( this.hotspots[i].collide( this.mouse ) )
 			{
 				this.target = this.hotspots[i];
+				this.target.dispatchEvent({ type: 'mousedown', mouse: this.mouse });
 				break;
 			}
 		}
@@ -85,7 +86,10 @@ class InputHandler extends EventDispatcher {
 
 		if ( this.click ) 
 		{
-			if ( this.target ) this.target.dispatchEvent({ type: 'click' });
+			if ( this.target ) 
+				this.target.dispatchEvent({ type: 'click' });
+			else 
+				this.dispatchEvent({ type: 'clickWithoutTarget', mouse: this.mouse });
 		}
 
 		if ( this.drag  && !this.target )
@@ -105,6 +109,12 @@ class InputHandler extends EventDispatcher {
 	addHotspot( hotspot:Hotspot )
 	{
 		this.hotspots.push( hotspot );
+	};
+
+	deleteHotspot( hotspot:Hotspot )
+	{
+		var index = this.hotspots.indexOf( hotspot );
+		if ( index >= 0 ) this.hotspots.splice( index, 1 );
 	};
 
 };

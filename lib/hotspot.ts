@@ -7,6 +7,10 @@ class Hotspot extends EventDispatcher {
 	origin		: Vector2d;
 	size		: Vector2d;
 	half		: Vector2d;
+	angle		: number;
+
+	corners		: Vector2d[];
+	translated	: Vector2d[];
 
 	enabled		: bool;
 	draggable	: bool;
@@ -20,6 +24,10 @@ class Hotspot extends EventDispatcher {
 		this.origin		= new Vector2d;
 		this.size		= new Vector2d;
 		this.half		= new Vector2d;
+		this.angle 		= 0;
+
+		this.corners	= [	new Vector2d, new Vector2d, new Vector2d, new Vector2d ];
+		this.translated	= [	new Vector2d, new Vector2d, new Vector2d, new Vector2d ];
 
 		this.draggable 	= draggable;
 		this.resizeable = resizeable;
@@ -33,6 +41,9 @@ class Hotspot extends EventDispatcher {
 
 		this.half.x = Math.abs(w / 2);
 		this.half.y = Math.abs(h / 2);
+
+		this.setCorners();
+		this.translate();
 	};
 
 
@@ -67,36 +78,74 @@ class Hotspot extends EventDispatcher {
 		this.half.y = hh;
 		this.size.x = hw * 2;
 		this.size.y = hh * 2;
+
+		this.setCorners();
 	};
+
+	setCorners()
+	{
+		this.corners[0].x = -this.half.x;
+		this.corners[0].y = -this.half.y;
+
+		this.corners[1].x = this.half.x;
+		this.corners[1].y = -this.half.y;
+
+		this.corners[2].x = this.half.x;
+		this.corners[2].y = this.half.y;
+
+		this.corners[3].x = -this.half.x;
+		this.corners[3].y = this.half.y;
+	}
+
+	translate()
+	{
+		// Translate into translated;
+		this.translated[0] = this.corners[0];
+		this.translated[1] = this.corners[1];
+		this.translated[2] = this.corners[2];
+		this.translated[3] = this.corners[3];
+	}
 
 	copy()
 	{
 		return new Hotspot( this.position.x, this.position.y, this.size.x, this.size.y, true, true );
 	};
 
-	render( ctx, renderStyle:number = 1, fillStyle='#000')
+	render( ctx, renderStyle:number = 1, highlighted:bool = false)
 	{
 		if ( this.enabled )
 		{
 			ctx.save();
-			ctx.globalAlpha 	= 0.3;
-			ctx.fillStyle 		= fillStyle;
-			ctx.strokeStyle		= fillStyle;
+			ctx.fillStyle 		= '#00f';
+			ctx.strokeStyle		= '#00f';
 
-			ctx.translate( this.position.x - this.half.x, this.position.y - this.half.y );
+			ctx.translate( this.position.x, this.position.y );
 
 			if ( renderStyle ) 
 			{
-				ctx.fillRect( 0, 0, this.size.x, this.size.y );
+				ctx.globalAlpha = 0.3;
+				ctx.fillRect( this.corners[0].x, this.corners[0].y, this.size.x, this.size.y );
 			}
 			else 
 			{
+				if (highlighted)
+				{
+					ctx.strokeStyle = '#f00';
+					ctx.beginPath();
+					ctx.moveTo(  0, -5 );
+					ctx.lineTo(  0, 5  );
+					ctx.moveTo( -5, 0  );
+					ctx.lineTo(  5, 0  );
+					ctx.stroke();
+				}
+
 				ctx.beginPath();
-				ctx.moveTo( 0, 0 );
-				ctx.lineTo( this.size.x, 0 );
-				ctx.lineTo( this.size.x, this.size.y );
-				ctx.lineTo( 0, this.size.y );
-				ctx.lineTo( 0, 0);
+				ctx.lineWidth = 2;
+				ctx.moveTo( this.translated[0].x, this.translated[0].y );
+				ctx.lineTo( this.translated[1].x, this.translated[1].y );
+				ctx.lineTo( this.translated[2].x, this.translated[2].y );
+				ctx.lineTo( this.translated[3].x, this.translated[3].y );
+				ctx.closePath();
 				ctx.stroke();
 			}
 

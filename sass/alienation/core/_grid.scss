@@ -1,0 +1,59 @@
+
+.row {
+	@extend .cf;
+}
+
+.column { 
+  width: 100%;
+  height: 100%;
+  min-height: 1px; // So they don't collapse leftwards when empty;
+}
+
+
+@include respond-min( $grid-breakpoint ) {
+	.column 		  { width: 6.5%; float: left;}
+	.column + .column { margin-left: 2%; }
+
+	.two-wide 		{ width: 15%; }
+	.three-wide 	{ width: 23.5%; }
+	.four-wide 		{ width: 32%; }
+	.five-wide 		{ width: 40.5%; }
+	.six-wide		{ width: 49%; }
+	.seven-wide		{ width: 57.5%; }
+	.eight-wide		{ width: 66%; }
+	.nine-wide		{ width: 74.5; }
+	.ten-wide 		{ width: 83%; }
+	.eleven-wide 	{ width: 89.5%; }
+	.twelve-wide 	{ width: 100%; }
+
+	/* Double gutters */
+	.column + .column.doublegutter { margin-left: 4%; }
+	.column.doublegutter + .column { margin-left: 4%; }
+
+	.two-wide.doublegutter		{ width: 13%; }
+	.three-wide.doublegutter	{ width: 21.5%; }
+	.four-wide.doublegutter		{ width: 30%; }
+	.five-wide.doublegutter		{ width: 38.5%; }
+	.six-wide.doublegutter		{ width: 47%; }
+	.seven-wide.doublegutter	{ width: 55.5%; }
+	.eight-wide.doublegutter	{ width: 64%; }
+	.nine-wide.doublegutter		{ width: 72.5; }
+	.ten-wide.doublegutter		{ width: 81%; }
+	.eleven-wide.doublegutter	{ width: 87.5%; }
+
+	/* triple gutters */
+	.column + .column.triplegutter { margin-left: 6%; }
+	.column.triplegutter + .column { margin-left: 6%; }
+
+	.two-wide.triplegutter		{ width: 11%; }
+	.three-wide.triplegutter	{ width: 19.5%; }
+	.four-wide.triplegutter		{ width: 28%; }
+	.five-wide.triplegutter		{ width: 36.5%; }
+	.six-wide.triplegutter		{ width: 45%; }
+	.seven-wide.triplegutter	{ width: 53.5%; }
+	.eight-wide.triplegutter	{ width: 62%; }
+	.nine-wide.triplegutter		{ width: 70.5; }
+	.ten-wide.triplegutter		{ width: 79%; }
+	.eleven-wide.triplegutter	{ width: 85.5%; }
+}
+

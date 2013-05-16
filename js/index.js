@@ -1,10 +1,12 @@
 var View = (function () {
-    function View(width, height) {
+    function View(width, height, background) {
         if (typeof width === "undefined") { width = 0; }
         if (typeof height === "undefined") { height = 0; }
+        if (typeof background === "undefined") { background = '#f3f3f3'; }
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
         this.resize(width, height);
+        this.background = background;
         window.addEventListener('resize', function () {
             this.resizetimer = setTimeout(this.resize.bind(this), 500);
         }.bind(this));
@@ -30,7 +32,10 @@ var View = (function () {
         style.marginLeft = -Math.abs(this.width / 2) + 'px';
     };
     View.prototype.clear = function () {
-        this.context.clearRect(0, 0, this.width, this.height);
+        this.context.save();
+        this.context.fillStyle = this.background;
+        this.context.fillRect(0, 0, this.width, this.height);
+        this.context.restore();
     };
     return View;
 })();
@@ -106,6 +111,19 @@ var Hotspot = (function (_super) {
         this.origin = new Vector2d();
         this.size = new Vector2d();
         this.half = new Vector2d();
+        this.angle = 0;
+        this.corners = [
+            new Vector2d(), 
+            new Vector2d(), 
+            new Vector2d(), 
+            new Vector2d()
+        ];
+        this.translated = [
+            new Vector2d(), 
+            new Vector2d(), 
+            new Vector2d(), 
+            new Vector2d()
+        ];
         this.draggable = draggable;
         this.resizeable = resizeable;
         this.enabled = enabled;
@@ -115,6 +133,8 @@ var Hotspot = (function (_super) {
         this.size.y = h;
         this.half.x = Math.abs(w / 2);
         this.half.y = Math.abs(h / 2);
+        this.setCorners();
+        this.translate();
     }
     Hotspot.prototype.collide = function (p) {
         var pos = this.position, half = this.half;
@@ -132,28 +152,55 @@ var Hotspot = (function (_super) {
         this.half.y = hh;
         this.size.x = hw * 2;
         this.size.y = hh * 2;
+        this.setCorners();
+    };
+    Hotspot.prototype.setCorners = function () {
+        this.corners[0].x = -this.half.x;
+        this.corners[0].y = -this.half.y;
+        this.corners[1].x = this.half.x;
+        this.corners[1].y = -this.half.y;
+        this.corners[2].x = this.half.x;
+        this.corners[2].y = this.half.y;
+        this.corners[3].x = -this.half.x;
+        this.corners[3].y = this.half.y;
+    };
+    Hotspot.prototype.translate = function () {
+        this.translated[0] = this.corners[0];
+        this.translated[1] = this.corners[1];
+        this.translated[2] = this.corners[2];
+        this.translated[3] = this.corners[3];
     };
     Hotspot.prototype.copy = function () {
         return new Hotspot(this.position.x, this.position.y, this.size.x, this.size.y, true, true);
     };
-    Hotspot.prototype.render = function (ctx, renderStyle, fillStyle) {
+    Hotspot.prototype.render = function (ctx, renderStyle, highlighted) {
         if (typeof renderStyle === "undefined") { renderStyle = 1; }
-        if (typeof fillStyle === "undefined") { fillStyle = '#000'; }
+        if (typeof highlighted === "undefined") { highlighted = false; }
         if(this.enabled) {
             ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = fillStyle;
-            ctx.strokeStyle = fillStyle;
-            ctx.translate(this.position.x - this.half.x, this.position.y - this.half.y);
+            ctx.fillStyle = '#00f';
+            ctx.strokeStyle = '#00f';
+            ctx.translate(this.position.x, this.position.y);
             if(renderStyle) {
-                ctx.fillRect(0, 0, this.size.x, this.size.y);
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(this.corners[0].x, this.corners[0].y, this.size.x, this.size.y);
             } else {
+                if(highlighted) {
+                    ctx.strokeStyle = '#f00';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -5);
+                    ctx.lineTo(0, 5);
+                    ctx.moveTo(-5, 0);
+                    ctx.lineTo(5, 0);
+                    ctx.stroke();
+                }
                 ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(this.size.x, 0);
-                ctx.lineTo(this.size.x, this.size.y);
-                ctx.lineTo(0, this.size.y);
-                ctx.lineTo(0, 0);
+                ctx.lineWidth = 2;
+                ctx.moveTo(this.translated[0].x, this.translated[0].y);
+                ctx.lineTo(this.translated[1].x, this.translated[1].y);
+                ctx.lineTo(this.translated[2].x, this.translated[2].y);
+                ctx.lineTo(this.translated[3].x, this.translated[3].y);
+                ctx.closePath();
                 ctx.stroke();
             }
             ctx.restore();
@@ -215,6 +262,10 @@ var InputHandler = (function (_super) {
         for(var i = 0, len = this.hotspots.length; i < len; i++) {
             if(this.hotspots[i].collide(this.mouse)) {
                 this.target = this.hotspots[i];
+                this.target.dispatchEvent({
+                    type: 'mousedown',
+                    mouse: this.mouse
+                });
                 break;
             }
         }
@@ -225,6 +276,11 @@ var InputHandler = (function (_super) {
             if(this.target) {
                 this.target.dispatchEvent({
                     type: 'click'
+                });
+            } else {
+                this.dispatchEvent({
+                    type: 'clickWithoutTarget',
+                    mouse: this.mouse
                 });
             }
         }
@@ -247,17 +303,81 @@ var InputHandler = (function (_super) {
     InputHandler.prototype.addHotspot = function (hotspot) {
         this.hotspots.push(hotspot);
     };
+    InputHandler.prototype.deleteHotspot = function (hotspot) {
+        var index = this.hotspots.indexOf(hotspot);
+        if(index >= 0) {
+            this.hotspots.splice(index, 1);
+        }
+    };
     return InputHandler;
 })(EventDispatcher);
 ;
+var KeyboardHandler = (function (_super) {
+    __extends(KeyboardHandler, _super);
+    function KeyboardHandler(focus) {
+        _super.call(this);
+        this.focus = focus;
+        this.logging = false;
+        this.capture = false;
+        this.keys = [];
+        this.callbacks = [];
+        this.focus.addEventListener('keydown', this.handleKeyDown.bind(this));
+        this.focus.addEventListener('keyup', this.handleKeyUp.bind(this));
+    }
+    KeyboardHandler.prototype.handleKeyDown = function (e) {
+        this._setKey(e);
+        if(this.callbacks[e.keyCode]) {
+            if(this.capture) {
+                e.preventDefault();
+            }
+            this.callbacks[e.keyCode].call();
+        }
+    };
+    KeyboardHandler.prototype.handleKeyUp = function (e) {
+        if(this.capture) {
+            e.preventDefault();
+        }
+        this._resetKey(e);
+    };
+    KeyboardHandler.prototype._setKey = function (e) {
+        if(this.logging) {
+            console.log(e.keyCode);
+        }
+        this.keys[e.keyCode] = true;
+    };
+    KeyboardHandler.prototype._resetKey = function (e) {
+        this.keys[e.keyCode] = false;
+    };
+    KeyboardHandler.prototype.key = function (id) {
+        return this.keys[id];
+    };
+    KeyboardHandler.prototype.slowKey = function (id, callback) {
+        this.callbacks[id] = callback;
+    };
+    return KeyboardHandler;
+})(EventDispatcher);
+var UI = (function () {
+    function UI() {
+    }
+    return UI;
+})();
 var SAOEditor = (function () {
     function SAOEditor() {
         this.view = new View();
         this.inputHandler = new InputHandler(this.view.canvas);
+        this.kbHandler = new KeyboardHandler(window);
+        this.kbHandler.capture = true;
         this.selection = new Hotspot(0, 0, 0, 0, false);
         this.collision = [];
+        this.ui = {
+            mode: document.querySelector('.ui-mode'),
+            selection: document.querySelector('.ui-selection')
+        };
+        this.ui.mode.className += ' show';
         this.inputHandler.addEventListener('dragWithoutTarget', this.ghostAABB.bind(this));
         this.inputHandler.addEventListener('dragWithoutTargetEnd', this.createAABB.bind(this));
+        this.inputHandler.addEventListener('clickWithoutTarget', this.clearActiveItem.bind(this));
+        this.kbHandler.slowKey(8, this.deleteActiveTarget.bind(this));
         document.body.appendChild(this.view.canvas);
         this.tick();
     }
@@ -269,7 +389,7 @@ var SAOEditor = (function () {
     };
     SAOEditor.prototype.paintCollision = function () {
         for(var i = 0, len = this.collision.length; i < len; i++) {
-            this.collision[i].render(this.view.context, 0, '#00f');
+            this.collision[i].render(this.view.context, 0, (this.collision[i] === this.activeItem));
         }
     };
     SAOEditor.prototype.ghostAABB = function (e) {
@@ -278,9 +398,24 @@ var SAOEditor = (function () {
     };
     SAOEditor.prototype.createAABB = function (e) {
         var aabb = this.selection.copy();
+        aabb.addEventListener('mousedown', function () {
+            this.activeItem = aabb;
+        }.bind(this));
         this.selection.enabled = false;
         this.inputHandler.addHotspot(aabb);
         this.collision.push(aabb);
+        this.activeItem = aabb;
+    };
+    SAOEditor.prototype.deleteActiveTarget = function () {
+        var index = this.collision.indexOf(this.activeItem);
+        if(index >= 0) {
+            this.collision.splice(index, 1);
+        }
+        this.inputHandler.deleteHotspot(this.activeItem);
+        this.clearActiveItem();
+    };
+    SAOEditor.prototype.clearActiveItem = function () {
+        this.activeItem = null;
     };
     return SAOEditor;
 })();
