@@ -49,8 +49,12 @@ class InputHandler extends EventDispatcher {
 			{
 				if ( this.target  && this.target.draggable ) 
 				{
-					this.target.dispatchEvent({ type: 'drag', from: this.origin, to: this.mouse, eventTarget: this.target });
+					this.target.drag( this.origin,  this.mouse );
 					this.element.style.cursor = 'all-scroll';
+				} 
+				else 
+				{
+					this.dispatchEvent({ type : 'dragWithoutTarget', from: this.origin, to: this.mouse });
 				}
 			}
 		}
@@ -79,9 +83,17 @@ class InputHandler extends EventDispatcher {
 	{
 		e.preventDefault();
 
-		if ( this.click ) {
+		if ( this.click ) 
+		{
 			if ( this.target ) this.target.dispatchEvent({ type: 'click' });
 		}
+
+		if ( this.drag  && !this.target )
+			this.dispatchEvent({ type: 'dragWithoutTargetEnd', from: this.origin, to: this.mouse });
+
+		if ( this.drag && this.target )
+			this.target.updateOrigin();
+
 		this.target 	= null;
 		this.click 		= true;
 		this.drag 		= false;

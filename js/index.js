@@ -103,11 +103,14 @@ var Hotspot = (function (_super) {
         if (typeof resizeable === "undefined") { resizeable = false; }
         _super.call(this);
         this.position = new Vector2d();
+        this.origin = new Vector2d();
         this.size = new Vector2d();
         this.half = new Vector2d();
+        this.draggable = draggable;
+        this.resizeable = resizeable;
         this.enabled = enabled;
-        this.position.x = x;
-        this.position.y = y;
+        this.position.x = this.origin.x = x;
+        this.position.y = this.origin.y = y;
         this.size.x = w;
         this.size.y = h;
         this.half.x = Math.abs(w / 2);
@@ -121,13 +124,49 @@ var Hotspot = (function (_super) {
             return false;
         }
     };
-    Hotspot.prototype.render = function (ctx) {
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#000';
-        ctx.translate(this.position.x - this.half.x, this.position.y - this.half.y);
-        ctx.fillRect(0, 0, this.size.x, this.size.y);
-        ctx.restore();
+    Hotspot.prototype.setFromCorners = function (x1, y1, x2, y2) {
+        var hw = Math.abs((x2 - x1) / 2), hh = Math.abs((y2 - y1) / 2), x = x1 + Math.round((x2 - x1) / 2), y = y1 + Math.round((y2 - y1) / 2);
+        this.position.x = x;
+        this.position.y = y;
+        this.half.x = hw;
+        this.half.y = hh;
+        this.size.x = hw * 2;
+        this.size.y = hh * 2;
+    };
+    Hotspot.prototype.copy = function () {
+        return new Hotspot(this.position.x, this.position.y, this.size.x, this.size.y, true, true);
+    };
+    Hotspot.prototype.render = function (ctx, renderStyle, fillStyle) {
+        if (typeof renderStyle === "undefined") { renderStyle = 1; }
+        if (typeof fillStyle === "undefined") { fillStyle = '#000'; }
+        if(this.enabled) {
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = fillStyle;
+            ctx.strokeStyle = fillStyle;
+            ctx.translate(this.position.x - this.half.x, this.position.y - this.half.y);
+            if(renderStyle) {
+                ctx.fillRect(0, 0, this.size.x, this.size.y);
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(this.size.x, 0);
+                ctx.lineTo(this.size.x, this.size.y);
+                ctx.lineTo(0, this.size.y);
+                ctx.lineTo(0, 0);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    };
+    Hotspot.prototype.drag = function (from, to) {
+        var dx = to.x - from.x, dy = to.y - from.y;
+        this.position.x = this.origin.x + dx;
+        this.position.y = this.origin.y + dy;
+    };
+    Hotspot.prototype.updateOrigin = function () {
+        this.origin.x = this.position.x;
+        this.origin.y = this.position.y;
     };
     return Hotspot;
 })(EventDispatcher);
@@ -155,13 +194,14 @@ var InputHandler = (function (_super) {
             }
             if(this.drag) {
                 if(this.target && this.target.draggable) {
-                    this.target.dispatchEvent({
-                        type: 'drag',
-                        from: this.origin,
-                        to: this.mouse,
-                        eventTarget: this.target
-                    });
+                    this.target.drag(this.origin, this.mouse);
                     this.element.style.cursor = 'all-scroll';
+                } else {
+                    this.dispatchEvent({
+                        type: 'dragWithoutTarget',
+                        from: this.origin,
+                        to: this.mouse
+                    });
                 }
             }
         }
@@ -188,6 +228,16 @@ var InputHandler = (function (_super) {
                 });
             }
         }
+        if(this.drag && !this.target) {
+            this.dispatchEvent({
+                type: 'dragWithoutTargetEnd',
+                from: this.origin,
+                to: this.mouse
+            });
+        }
+        if(this.drag && this.target) {
+            this.target.updateOrigin();
+        }
         this.target = null;
         this.click = true;
         this.drag = false;
@@ -200,23 +250,38 @@ var InputHandler = (function (_super) {
     return InputHandler;
 })(EventDispatcher);
 ;
-var view = new View();
-var inputHandler = new InputHandler(view.canvas);
-var Test = (function (_super) {
-    __extends(Test, _super);
-    function Test() {
-        _super.apply(this, arguments);
-
+var SAOEditor = (function () {
+    function SAOEditor() {
+        this.view = new View();
+        this.inputHandler = new InputHandler(this.view.canvas);
+        this.selection = new Hotspot(0, 0, 0, 0, false);
+        this.collision = [];
+        this.inputHandler.addEventListener('dragWithoutTarget', this.ghostAABB.bind(this));
+        this.inputHandler.addEventListener('dragWithoutTargetEnd', this.createAABB.bind(this));
+        document.body.appendChild(this.view.canvas);
+        this.tick();
     }
-    Test.prototype.test = function () {
-        alert('hello');
+    SAOEditor.prototype.tick = function () {
+        this.view.clear();
+        this.paintCollision();
+        this.selection.render(this.view.context);
+        requestAnimationFrame(this.tick.bind(this));
     };
-    return Test;
-})(Hotspot);
-inputHandler.addHotspot(new Test(100, 100, 50, 50));
-document.body.appendChild(view.canvas);
-function tick() {
-    view.clear();
-    requestAnimationFrame(tick);
-}
-tick();
+    SAOEditor.prototype.paintCollision = function () {
+        for(var i = 0, len = this.collision.length; i < len; i++) {
+            this.collision[i].render(this.view.context, 0, '#00f');
+        }
+    };
+    SAOEditor.prototype.ghostAABB = function (e) {
+        this.selection.enabled = true;
+        this.selection.setFromCorners(e.from.x, e.from.y, e.to.x, e.to.y);
+    };
+    SAOEditor.prototype.createAABB = function (e) {
+        var aabb = this.selection.copy();
+        this.selection.enabled = false;
+        this.inputHandler.addHotspot(aabb);
+        this.collision.push(aabb);
+    };
+    return SAOEditor;
+})();
+var editor = new SAOEditor();

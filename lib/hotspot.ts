@@ -4,6 +4,7 @@
 class Hotspot extends EventDispatcher {
 
 	position	: Vector2d;
+	origin		: Vector2d;
 	size		: Vector2d;
 	half		: Vector2d;
 
@@ -16,13 +17,16 @@ class Hotspot extends EventDispatcher {
 		super();
 
 		this.position 	= new Vector2d;
+		this.origin		= new Vector2d;
 		this.size		= new Vector2d;
 		this.half 		= new Vector2d;
 
-		this.enabled = enabled;
+		this.draggable 	= draggable;
+		this.resizeable = resizeable;
+		this.enabled 	= enabled;
 
-		this.position.x = x;
-		this.position.y = y;
+		this.position.x = this.origin.x = x;
+		this.position.y = this.origin.y = y;
 
 		this.size.x = w;
 		this.size.y = h;
@@ -50,16 +54,69 @@ class Hotspot extends EventDispatcher {
 		}
 	};
 
-	render( ctx )
+	setFromCorners( x1:number, y1:number, x2:number, y2:number )
 	{
-		ctx.save();
-		ctx.globalAlpha 	= 0.3;
-		ctx.fillStyle 		= '#000';
+		var hw = Math.abs((x2 - x1) / 2),
+			hh = Math.abs((y2 - y1) / 2),
+			x = x1 + Math.round((x2 - x1) / 2),
+			y = y1 + Math.round((y2 - y1) / 2);
+		
+		this.position.x = x;
+		this.position.y = y;
+		this.half.x = hw;
+		this.half.y = hh;
+		this.size.x = hw * 2;
+		this.size.y = hh * 2;
+	};
 
-		ctx.translate( this.position.x - this.half.x, this.position.y - this.half.y );
-		ctx.fillRect( 0, 0, this.size.x, this.size.y );
+	copy()
+	{
+		return new Hotspot( this.position.x, this.position.y, this.size.x, this.size.y, true, true );
+	};
 
-		ctx.restore();
-	}
+	render( ctx, renderStyle:number = 1, fillStyle='#000')
+	{
+		if ( this.enabled )
+		{
+			ctx.save();
+			ctx.globalAlpha 	= 0.3;
+			ctx.fillStyle 		= fillStyle;
+			ctx.strokeStyle		= fillStyle;
+
+			ctx.translate( this.position.x - this.half.x, this.position.y - this.half.y );
+
+			if ( renderStyle ) 
+			{
+				ctx.fillRect( 0, 0, this.size.x, this.size.y );
+			}
+			else 
+			{
+				ctx.beginPath();
+				ctx.moveTo( 0, 0 );
+				ctx.lineTo( this.size.x, 0 );
+				ctx.lineTo( this.size.x, this.size.y );
+				ctx.lineTo( 0, this.size.y );
+				ctx.lineTo( 0, 0);
+				ctx.stroke();
+			}
+
+			ctx.restore();
+		}
+	};
+
+	drag( from:Vector2d, to:Vector2d )
+	{
+		var dx = to.x - from.x,
+			dy = to.y - from.y;
+
+		this.position.x = this.origin.x + dx;
+		this.position.y = this.origin.y + dy;
+	};
+
+	updateOrigin()
+	{
+		this.origin.x = this.position.x;
+		this.origin.y = this.position.y;
+	};
 
 }
