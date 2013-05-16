@@ -16,10 +16,10 @@ class Hotspot extends EventDispatcher {
 	{
 		super();
 
-		this.position 	= new Vector2d;
+		this.position	= new Vector2d;
 		this.origin		= new Vector2d;
 		this.size		= new Vector2d;
-		this.half 		= new Vector2d;
+		this.half		= new Vector2d;
 
 		this.draggable 	= draggable;
 		this.resizeable = resizeable;
